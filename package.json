@@ -1,0 +1,30 @@
+{
+  "name": "homebridge-hive",
+  "version": "1.0.0",
+  "description": "Hive Thermostat plugin for Homebridge (https://github.com/nfarina/homebridge)",
+  "license": "MIT",
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  },
+  "author": "Mark Wade",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mark-wade/homebridge-hive.git"
+  },
+  "dependencies": {
+    "request": "^2.65.0"
+  },
+  "bugs": {
+    "url": "https://github.com/mark-wade/homebridge-hive/issues"
+  },
+  "homepage": "https://github.com/mark-wade/homebridge-hive#readme",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
