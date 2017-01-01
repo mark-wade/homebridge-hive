@@ -2,6 +2,7 @@
 
 This [HomeBridge](https://github.com/nfarina/homebridge) Plugin adds support for the Hive Active Heating thermostat to be controlled in the Home app in iOS and via Siri.
 
+
 ## Installation
 
 ### 1. Install HomeBridge
@@ -38,3 +39,9 @@ In your `config.json` file, add this accessory providing the username and passwo
 ```
 
 Then restart homebridge.
+
+## Known Issues
+
+* When changing the mode you will see options for Off, Heat, Cool and Auto even though only Off and Heat are supported (because of course, Hive can only heat, there's no aircon). This is because, as far as I can tell (let me know if I'm wrong) HomeKit doesn't have a way to specify that cooling isn't available. If you choose "Cool" it will do the same as "Off" and if you choose "Auto" it will do the same as "Heat". In both cases, the UI will show a bit strange until it next refreshes its status.
+* If you go into the Details in the Home app, you will see an option to change the display to Celsius or Fahrenheit but attempting to change it will immediately change it back because again, Hive doesn't have that option but HomeKit seems to require it.
+* If you go into the Details in the Home app, you will see a blank space next to Serial Number. This is because the Hive API doesn't expose this information but again, HomeKit seems to require it.
