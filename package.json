@@ -1,6 +1,6 @@
 {
   "name": "homebridge-hive",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hive Thermostat plugin for Homebridge (https://github.com/nfarina/homebridge)",
   "license": "MIT",
   "keywords": [
