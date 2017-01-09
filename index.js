@@ -19,6 +19,7 @@ function HiveThermostat(log, config) {
 			this.log(error);
 		} else {
 			this.log( "API Key: " + this.apiKey );
+			this.getMainData(function(){});
 		}
 	}.bind(this));
 	this.cachedDataTime = null;
@@ -41,20 +42,31 @@ HiveThermostat.prototype = {
 	getNewApiKey: function(callback) {	
 		this.log("Logging into Hive...");	
 		request.post({
-			url: "http://api.bgchlivehome.co.uk/v5/login",
-			formData: {
-				'username': this.username,
-				'password': this.password,
-				'caller': 'WEB'
-			}
+			url: "https://api-prod.bgchprod.info:443/omnia/auth/sessions",
+			headers: {
+				'Content-Type': 'application/vnd.alertme.zoo-6.1+json',
+				'Accept': 'application/vnd.alertme.zoo-6.1+json',
+				'X-Omnia-Client': 'Hive Web Dashboard'
+			},
+			body: JSON.stringify({
+				"sessions": [{
+					"username": this.username,
+					"password": this.password,
+					"caller": "WEB"
+				}]
+			})
 		},
 		function(error, response, body) {	
-			var json = JSON.parse(body);
-			if ( json.error ) {
-				callback( json.error.reason )
-			} else {
-				this.apiKey = json.ApiSession;
-				callback( null );
+			try {
+				var json = JSON.parse(body);
+				if ( json.error ) {
+					callback( json.error.reason )
+				} else {
+					this.apiKey = json.sessions[0].sessionId;
+					callback( null );
+				}
+			} catch (e) {
+				callback( "JSON Parse Error\n" + body );
 			}
 		}.bind(this));		
 	},
@@ -87,17 +99,25 @@ HiveThermostat.prototype = {
 		/* Still here? Okay we're going to make the call... */
 		this.log( "Fetching data from Hive API" );		
 		request({
-			url: "http://api.bgchlivehome.co.uk/v5/users/" + this.username + "/widgets/climate",
+			url: "https://api-prod.bgchprod.info:443/omnia/nodes",
 			headers: {
-				'Cookie': 'ApiSession=' + this.apiKey
+				'Content-Type': 'application/vnd.alertme.zoo-6.1+json',
+				'Accept': 'application/vnd.alertme.zoo-6.1+json',
+				'X-Omnia-Client': 'Hive Web Dashboard',
+				'X-Omnia-Access-Token': this.apiKey
 			}
 		},
 		
 		/* Once we have it... */
 		function(error, response, body) {	
 			
-			/* Parse the response */		
-			this.cachedData = JSON.parse(body);
+			/* Parse the response */
+			body = JSON.parse(body);
+			for ( var i = 0; i < body.nodes.length; i++ ) {
+				if ( body.nodes[i].attributes.temperature ) {
+					this.cachedData = body.nodes[i];
+				}
+			}
 			this.cachedDataTime = Date.now()
 			
 			/* Run our callbacks */
@@ -125,8 +145,8 @@ HiveThermostat.prototype = {
 		this.thermostatService.getCharacteristic(Characteristic.CurrentTemperature)
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
-					this.log( "Current temperature is " + data.currentTemperature );
-					callback( error, data.currentTemperature );
+					this.log( "Current temperature is " + data.attributes.temperature.reportedValue );
+					callback( error, data.attributes.temperature.reportedValue );
 				}.bind(this));
 			}.bind(this))
 		;
@@ -143,9 +163,16 @@ HiveThermostat.prototype = {
 		this.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
-					var currentHeatingCoolingState = data.active ? Characteristic.CurrentHeatingCoolingState.HEAT : Characteristic.CurrentHeatingCoolingState.OFF;
+					
+					if ( data.attributes.stateHeatingRelay.reportedValue == 'OFF' ) {
+						var currentHeatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
+					} else {
+						var currentHeatingCoolingState = Characteristic.CurrentHeatingCoolingState.HEAT;
+					}
+					
 					this.log( "Current state is " + currentHeatingCoolingState );
 					callback( error, currentHeatingCoolingState );
+					
 				}.bind(this));
 			}.bind(this))
 		;
@@ -164,9 +191,16 @@ HiveThermostat.prototype = {
 			 */
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
-					var targetHeatingCoolingState = data.mode == 'OFF' ? Characteristic.TargetHeatingCoolingState.OFF : Characteristic.TargetHeatingCoolingState.HEAT
+					
+					if ( data.attributes.activeHeatCoolMode.reportedValue == 'OFF' ) {
+						var targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF;
+					} else {
+						var targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.HEAT;
+					}
+					
 					this.log( "Target state is " + targetHeatingCoolingState );
 					callback( error, targetHeatingCoolingState );
+					
 				}.bind(this));
 			}.bind(this))
 						
@@ -196,29 +230,28 @@ HiveThermostat.prototype = {
 									
 					/* Set it */
 					request.put({
-						url: "http://api.bgchlivehome.co.uk/v5/users/" + this.username + "/widgets/climate/control",
+						url: "https://api-prod.bgchprod.info:443/omnia/nodes/" + data.id,
 						headers: {
-							'Cookie': 'ApiSession=' + this.apiKey,
-							'Content-Type': 'application/x-www-form-urlencoded'
+							'Content-Type': 'application/vnd.alertme.zoo-6.1+json',
+							'Accept': 'application/vnd.alertme.zoo-6.1+json',
+							'X-Omnia-Client': 'Hive Web Dashboard',
+							'X-Omnia-Access-Token': this.apiKey
 						},
-						body: 'control=' + stateForHive
+						body: JSON.stringify({
+							"nodes": [{
+						        "attributes": {
+						            "activeHeatCoolMode": {
+						                "targetValue": stateForHive
+						            }
+						        }
+						    }]
+						})
 					},
 									
 					/* Once we have it... */
 					function(error, response, body) {	
 						this.log( "Set target state to " + stateForHomebridge );
-						
-						/* If we turned the heating on, our target temperature is going to be wrong, update it */
-						if ( data.mode == 'OFF' && stateForHive != 'OFF' ) {
-							this.thermostatService.getCharacteristic(Characteristic.TargetTemperature).setValue( data.targetTemperature, function(){
-								callback(null);
-							}.bind(this) )
-						}
-						/* Otherwise, we can just callback as normal */
-						else {
-							callback(null);
-						}
-						
+						callback(null);
 					}.bind(this));
 					
 				}.bind(this))
@@ -238,8 +271,8 @@ HiveThermostat.prototype = {
 			 */
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
-					this.log( "Target temperature is " + data.targetTemperature );
-					callback(error,data.targetTemperature);
+					this.log( "Target temperature is " + data.attributes.targetHeatTemperature.targetValue );
+					callback(error,data.attributes.targetHeatTemperature.targetValue);
 				}.bind(this));
 			}.bind(this))
 			
@@ -262,12 +295,22 @@ HiveThermostat.prototype = {
 					
 					/* Set it */			
 					request.put({
-						url: "http://api.bgchlivehome.co.uk/v5/users/" + this.username + "/widgets/climate/targetTemperature",
+						url: "https://api-prod.bgchprod.info:443/omnia/nodes/" + data.id,
 						headers: {
-							'Cookie': 'ApiSession=' + this.apiKey,
-							'Content-Type': 'application/x-www-form-urlencoded'
+							'Content-Type': 'application/vnd.alertme.zoo-6.1+json',
+							'Accept': 'application/vnd.alertme.zoo-6.1+json',
+							'X-Omnia-Client': 'Hive Web Dashboard',
+							'X-Omnia-Access-Token': this.apiKey
 						},
-						body: 'temperatureUnit=C&temperature=' + value
+						body: JSON.stringify({
+							"nodes": [{
+						        "attributes": {
+						            "targetHeatTemperature": {
+						                "targetValue": value
+						            }
+						        }
+						    }]
+						})
 					},
 					
 					/* Once we have it... */
@@ -275,12 +318,12 @@ HiveThermostat.prototype = {
 						this.log( "Set target temperature to " + value );
 						
 						/* Does this mean the thermostat will turn on/off? */
-						if ( value > data.currentTemperature && !data.active ) {
+						if ( value > data.attributes.temperature.reportedValue && data.attributes.stateHeatingRelay.reportedValue == 'OFF' ) {
 							this.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 								.setValue( Characteristic.CurrentHeatingCoolingState.HEAT, function(){
 									callback(null);
 								}.bind(this) );
-						} else if ( value < data.currentTemperature && data.active ) {
+						} else if ( value < data.attributes.temperature.reportedValue && data.attributes.stateHeatingRelay.reportedValue == 'HEAT' ) {
 							this.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 								.setValue( Characteristic.CurrentHeatingCoolingState.OFF, function(){
 									callback(null);
