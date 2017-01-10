@@ -72,7 +72,7 @@ HiveThermostat.prototype = {
 	},
 	
 	/**
-	 * Get the main data from Hive's API
+	 * Get the main data from Hive's API using a queue to prevent multiple calls
 	 *
 	 * callback( error )
 	 */
@@ -96,23 +96,9 @@ HiveThermostat.prototype = {
 		}
 		this.mainDataCallbacks.push( callback );
 		
-		/* Still here? Okay we're going to make the call... */
-		this.log( "Fetching data from Hive API" );		
-		request({
-			url: "https://api-prod.bgchprod.info:443/omnia/nodes",
-			headers: {
-				'Content-Type': 'application/vnd.alertme.zoo-6.1+json',
-				'Accept': 'application/vnd.alertme.zoo-6.1+json',
-				'X-Omnia-Client': 'Hive Web Dashboard',
-				'X-Omnia-Access-Token': this.apiKey
-			}
-		},
-		
-		/* Once we have it... */
-		function(error, response, body) {	
-			
+		/* Still here? Define the sucess handler... */
+		var successHandler = function(body){
 			/* Parse the response */
-			body = JSON.parse(body);
 			for ( var i = 0; i < body.nodes.length; i++ ) {
 				if ( body.nodes[i].attributes.temperature ) {
 					this.cachedData = body.nodes[i];
@@ -125,8 +111,44 @@ HiveThermostat.prototype = {
 				this.mainDataCallbacks[i]( null, this.cachedData );
 			}
 			this.mainDataCallbacks = [];
+		}.bind(this);
+		/* ...and make the call */
+		this._getMainData(function(error, response, body) {	
+			body = JSON.parse(body);
+			if ( body.errors ) {
+				this.getNewApiKey(function(error){
+					this._getMainData(function(error, response, body) {
+						body = JSON.parse(body);
+						if ( body.errors ) {
+							this.log( body.errors );
+						} else {
+							successHandler(body);
+						}
+					}.bind(this));
+				}.bind(this));
+				return;
+			}
+			successHandler(body);
 			
 		}.bind(this));		
+	},
+	
+	/**
+	 * Get the main data from Hive's API
+	 *
+	 * callback( error )
+	 */
+	_getMainData: function(callback) {
+		this.log( "Fetching data from Hive API" );		
+		request({
+			url: "https://api-prod.bgchprod.info:443/omnia/nodes",
+			headers: {
+				'Content-Type': 'application/vnd.alertme.zoo-6.1+json',
+				'Accept': 'application/vnd.alertme.zoo-6.1+json',
+				'X-Omnia-Client': 'Hive Web Dashboard',
+				'X-Omnia-Access-Token': this.apiKey
+			}
+		}, callback );
 	},
 	
 	/* -------------------- */
