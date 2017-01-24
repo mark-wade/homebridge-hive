@@ -18,7 +18,7 @@ function HiveThermostat(log, config) {
 			this.log("Could not log into Hive");
 			this.log(error);
 		} else {
-			this.log( "API Key: " + this.apiKey );
+			this.log( "Logged In" );
 			this.getMainData(function(){});
 		}
 	}.bind(this));
