@@ -12,6 +12,7 @@ function HiveThermostat(log, config) {
 	this.informationService = new Service.AccessoryInformation();
 	this.username = config.username;
 	this.password = config.password;
+	this.id = config.hasOwnProperty('id') ? config.id : null;
 	this.mainDataCallbacks = [];
 	this.getNewApiKey(function(error){
 		if ( error ) {
@@ -19,7 +20,7 @@ function HiveThermostat(log, config) {
 			this.log(error);
 		} else {
 			this.log( "Logged In" );
-			this.getMainData(function(){});
+			this.getMainData(function(){},true);
 		}
 	}.bind(this));
 	this.cachedDataTime = null;
@@ -76,7 +77,7 @@ HiveThermostat.prototype = {
 	 *
 	 * callback( error )
 	 */
-	getMainData: function(callback) {
+	getMainData: function(callback,showIds) {
 		
 		/* If we don't have an API key, don't even bother */
 		if ( !this.apiKey ) {
@@ -100,8 +101,11 @@ HiveThermostat.prototype = {
 		var successHandler = function(body){
 			/* Parse the response */
 			for ( var i = 0; i < body.nodes.length; i++ ) {
-				if ( body.nodes[i].attributes.temperature ) {
+				if ( body.nodes[i].attributes.temperature && ( !this.id || body.nodes[i].id == this.id ) ) {
 					this.cachedData = body.nodes[i];
+					if ( showIds ) {
+						this.log("Found thermostat " + body.nodes[i].id + ". Current temperature is " + body.nodes[i].attributes.temperature.reportedValue + ", set to " + body.nodes[i].attributes.targetHeatTemperature.reportedValue );
+					}
 				}
 			}
 			this.cachedDataTime = Date.now()

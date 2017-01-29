@@ -40,6 +40,42 @@ In your `config.json` file, add this accessory providing the username and passwo
 
 Then restart homebridge.
 
+## Advanced Configuration
+
+### If you have more than one thermostat...
+
+If you have multiple thermostats, you will need to do some additional setup. When you run HomeBridge, you will see an output similar to this...
+
+```
+[Hive Thermostat] Logged In
+[Hive Thermostat] Fetching data from Hive API
+[Hive Thermostat] Found thermostat xxxxx-xxxxxx-xxxxx-xxxxx. Current temperature is 19.56, set to 19
+[Hive Thermostat] Found thermostat yyyyy-yyyyyy-yyyyy-yyyyy. Current temperature is 19.20, set to 19
+```
+
+For each thermostat, add an entry to your config.json file with an additional "id" parameter as it shows in that output. For example:
+
+```
+    "accessories": [
+        {
+            "accessory": "HiveThermostat",
+            "name": "Upstairs Thermostat",
+            "username": "you@example.com",
+            "password": "123456789",
+            "id": "xxxxx-xxxxxx-xxxxx-xxxxx"
+        },
+        {
+            "accessory": "HiveThermostat",
+            "name": "Downstairs Thermostat",
+            "username": "you@example.com",
+            "password": "123456789",
+            "id": "yyyyy-yyyyyy-yyyyy-yyyyy"
+        }
+    ],
+```
+
+
+
 ## Known Issues
 
 * When changing the mode you will see options for Off, Heat, Cool and Auto even though only Off and Heat are supported (because of course, Hive can only heat, there's no aircon). This is because, as far as I can tell (let me know if I'm wrong) HomeKit doesn't have a way to specify that cooling isn't available. If you choose "Cool" it will do the same as "Off" and if you choose "Auto" it will do the same as "Heat". In both cases, the UI will show a bit strange until it next refreshes its status.
