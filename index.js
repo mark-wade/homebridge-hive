@@ -10,6 +10,7 @@ function HiveThermostat(log, config) {
 	this.name = config.name;
 	this.thermostatService = new Service.Thermostat(this.name);
 	this.informationService = new Service.AccessoryInformation();
+	this.batteryService = new Service.BatteryService();
 	this.username = config.username;
 	this.password = config.password;
 	this.id = config.hasOwnProperty('id') ? config.id : null;
@@ -24,7 +25,8 @@ function HiveThermostat(log, config) {
 		}
 	}.bind(this));
 	this.cachedDataTime = null;
-	this.cachedData = null;
+	this.cachedMainData = null;
+	this.cachedSecondaryData = null;
 }
 
 HiveThermostat.prototype = {
@@ -86,7 +88,7 @@ HiveThermostat.prototype = {
 		
 		/* If we have a cache from within 2 seconds, use that */
 		if ( this.cachedDataTime && this.cachedDataTime > Date.now() - 1000 ) {
-			callback( null, this.cachedData );
+			callback( null, this.cachedMainData );
 			return;
 		}
 		
@@ -102,9 +104,15 @@ HiveThermostat.prototype = {
 			/* Parse the response */
 			for ( var i = 0; i < body.nodes.length; i++ ) {
 				if ( body.nodes[i].attributes.temperature && ( !this.id || body.nodes[i].id == this.id ) ) {
-					this.cachedData = body.nodes[i];
+					this.cachedMainData = body.nodes[i];
 					if ( showIds ) {
 						this.log("Found thermostat " + body.nodes[i].id + ". Current temperature is " + body.nodes[i].attributes.temperature.reportedValue + ", set to " + body.nodes[i].attributes.targetHeatTemperature.reportedValue );
+					} else {
+						for ( var j = 0; j < body.nodes.length; j++ ) {
+							if ( body.nodes[j].attributes.batteryLevel && body.nodes[j].relationships.boundNodes[0].id == body.nodes[i].parentNodeId ) {
+								this.cachedSecondaryData = body.nodes[j];
+							}
+						}
 					}
 				}
 			}
@@ -112,7 +120,7 @@ HiveThermostat.prototype = {
 			
 			/* Run our callbacks */
 			for ( var i = 0; i < this.mainDataCallbacks.length; i++ ) {
-				this.mainDataCallbacks[i]( null, this.cachedData );
+				this.mainDataCallbacks[i]( null, this.cachedMainData );
 			}
 			this.mainDataCallbacks = [];
 		}.bind(this);
@@ -389,7 +397,42 @@ HiveThermostat.prototype = {
 			}.bind(this))
 		;		
 		
-
+		/* --------------------- */
+		/* !BatteryService		 */
+		/* --------------------- */
+		
+		/**
+		 * Battery Level
+		 */
+		this.batteryService.getCharacteristic(Characteristic.BatteryLevel)
+			.on('get', function(callback) {
+				var self = this;
+				this.getMainData(function(error,data){
+					callback( null, self.cachedSecondaryData.attributes.batteryLevel.reportedValue );
+				});
+			}.bind(this))
+		;
+		
+		/**
+		 * Charging State
+		 */
+		this.batteryService.getCharacteristic(Characteristic.ChargingState)
+			.on('get', function(callback) {
+				callback( null, false );
+			}.bind(this))
+		;
+		
+		/**
+		 * Low Battery Status
+		 */
+		this.batteryService.getCharacteristic(Characteristic.StatusLowBattery)
+			.on('get', function(callback) {
+				var self = this;
+				this.getMainData(function(error,data){
+					callback( null, ( self.cachedSecondaryData.attributes.batteryState.reportedValue === 'NORMAL' || self.cachedSecondaryData.attributes.batteryState.reportedValue === 'FULL' ) ? Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL : Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW );
+				});
+			}.bind(this))
+		;
 		
 		/* --------------------- */
 		/* !AccessoryInformation */
@@ -403,6 +446,6 @@ HiveThermostat.prototype = {
 		
 		
 		
-		return [this.thermostatService,this.informationService];
+		return [this.thermostatService,this.batteryService,this.informationService];
 	}
 };
