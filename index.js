@@ -107,11 +107,10 @@ HiveThermostat.prototype = {
 					this.cachedMainData = body.nodes[i];
 					if ( showIds ) {
 						this.log("Found thermostat " + body.nodes[i].id + ". Current temperature is " + body.nodes[i].attributes.temperature.reportedValue + ", set to " + body.nodes[i].attributes.targetHeatTemperature.reportedValue );
-					} else {
-						for ( var j = 0; j < body.nodes.length; j++ ) {
-							if ( body.nodes[j].attributes.batteryLevel && body.nodes[j].relationships.boundNodes[0].id == body.nodes[i].parentNodeId ) {
-								this.cachedSecondaryData = body.nodes[j];
-							}
+					}
+					for ( var j = 0; j < body.nodes.length; j++ ) {
+						if ( body.nodes[j].attributes.batteryLevel && body.nodes[j].relationships.boundNodes[0].id == body.nodes[i].parentNodeId ) {
+							this.cachedSecondaryData = body.nodes[j];
 						}
 					}
 				}
