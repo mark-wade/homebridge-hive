@@ -27,6 +27,7 @@ function HiveThermostat(log, config) {
 	this.cachedDataTime = null;
 	this.cachedMainData = null;
 	this.cachedSecondaryData = null;
+	this.debug = config.hasOwnProperty('debug') ? config.debug : false;
 }
 
 HiveThermostat.prototype = {
@@ -59,7 +60,7 @@ HiveThermostat.prototype = {
 				}]
 			})
 		},
-		function(error, response, body) {	
+		function(error, response, body) {
 			try {
 				var json = JSON.parse(body);
 				if ( json.error ) {
@@ -125,6 +126,9 @@ HiveThermostat.prototype = {
 		}.bind(this);
 		/* ...and make the call */
 		this._getMainData(function(error, response, body) {	
+			if ( this.debug ) {
+				this.log( response );
+			}
 			body = JSON.parse(body);
 			if ( body.errors ) {
 				this.getNewApiKey(function(error){
