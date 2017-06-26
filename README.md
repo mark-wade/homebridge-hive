@@ -81,3 +81,11 @@ For each thermostat, add an entry to your config.json file with an additional "i
 * When changing the mode you will see options for Off, Heat, Cool and Auto even though only Off and Heat are supported (because of course, Hive can only heat, there's no aircon). This is because, as far as I can tell (let me know if I'm wrong) HomeKit doesn't have a way to specify that cooling isn't available. If you choose "Cool" it will do the same as "Off" and if you choose "Auto" it will do the same as "Heat". In both cases, the UI will show a bit strange until it next refreshes its status.
 * If you go into the Details in the Home app, you will see an option to change the display to Celsius or Fahrenheit but attempting to change it will immediately change it back because again, Hive doesn't have that option but HomeKit seems to require it.
 * If you go into the Details in the Home app, you will see a blank space next to Serial Number. This is because the Hive API doesn't expose this information but again, HomeKit seems to require it.
+
+## Other Hive Products
+
+Currently this plugin only supports the Hive Active Heating thermostat as this is the only Hive product I use myself although I regularly receive requests from people asking me to support other Hive products.
+
+One person has sent me a Hive Active Plug, and so I am hoping to add support for it soon, however I have no plans to expand this plugin to other Hive products. If you desperately need HomeKit support for other Hive products, you are welcome to send me one of whatever product it is you want support for and I might get round to adding support for it (and will be happy to send it back to you after) but I make no promises I will get round to it any time soon.
+
+I hope that Hive will add native HomeKit support soon making this Plugin no longer required (if anyone has any news about this please let me know). 
