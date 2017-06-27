@@ -10,7 +10,6 @@ function HiveThermostat(log, config) {
 	this.name = config.name;
 	this.thermostatService = new Service.Thermostat(this.name);
 	this.informationService = new Service.AccessoryInformation();
-	this.batteryService = new Service.BatteryService();
 	this.username = config.username;
 	this.password = config.password;
 	this.id = config.hasOwnProperty('id') ? config.id : null;
@@ -26,7 +25,6 @@ function HiveThermostat(log, config) {
 	}.bind(this));
 	this.cachedDataTime = null;
 	this.cachedMainData = null;
-	this.cachedSecondaryData = null;
 	this.debug = config.hasOwnProperty('debug') ? config.debug : false;
 }
 
@@ -108,11 +106,6 @@ HiveThermostat.prototype = {
 					this.cachedMainData = body.nodes[i];
 					if ( showIds ) {
 						this.log("Found thermostat " + body.nodes[i].id + ". Current temperature is " + body.nodes[i].attributes.temperature.reportedValue + ", set to " + body.nodes[i].attributes.targetHeatTemperature.reportedValue );
-					}
-					for ( var j = 0; j < body.nodes.length; j++ ) {
-						if ( body.nodes[j].attributes.batteryLevel && body.nodes[j].relationships.boundNodes[0].id == body.nodes[i].parentNodeId ) {
-							this.cachedSecondaryData = body.nodes[j];
-						}
 					}
 				}
 			}
@@ -399,44 +392,7 @@ HiveThermostat.prototype = {
 				callback("Cannot change display units");
 			}.bind(this))
 		;		
-		
-		/* --------------------- */
-		/* !BatteryService		 */
-		/* --------------------- */
-		
-		/**
-		 * Battery Level
-		 */
-		this.batteryService.getCharacteristic(Characteristic.BatteryLevel)
-			.on('get', function(callback) {
-				var self = this;
-				this.getMainData(function(error,data){
-					callback( null, self.cachedSecondaryData.attributes.batteryLevel.reportedValue );
-				});
-			}.bind(this))
-		;
-		
-		/**
-		 * Charging State
-		 */
-		this.batteryService.getCharacteristic(Characteristic.ChargingState)
-			.on('get', function(callback) {
-				callback( null, false );
-			}.bind(this))
-		;
-		
-		/**
-		 * Low Battery Status
-		 */
-		this.batteryService.getCharacteristic(Characteristic.StatusLowBattery)
-			.on('get', function(callback) {
-				var self = this;
-				this.getMainData(function(error,data){
-					callback( null, ( self.cachedSecondaryData.attributes.batteryState.reportedValue === 'NORMAL' || self.cachedSecondaryData.attributes.batteryState.reportedValue === 'FULL' ) ? Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL : Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW );
-				});
-			}.bind(this))
-		;
-		
+				
 		/* --------------------- */
 		/* !AccessoryInformation */
 		/* --------------------- */
@@ -449,6 +405,6 @@ HiveThermostat.prototype = {
 		
 		
 		
-		return [this.thermostatService,this.batteryService,this.informationService];
+		return [this.thermostatService,this.informationService];
 	}
 };
