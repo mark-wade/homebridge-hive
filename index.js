@@ -104,7 +104,7 @@ HiveThermostat.prototype = {
 			for ( var i = 0; i < body.nodes.length; i++ ) {
 				if ( body.nodes[i].nodeType == "http:\/\/alertme.com\/schema\/json\/node.class.thermostat.json#" && body.nodes[i].attributes.temperature && ( !this.id || body.nodes[i].id == this.id ) ) {
 					this.cachedMainData = body.nodes[i];
-                                        this.log(JSON.stringify(body.nodes[i]);
+                                        this.log(JSON.stringify(body.nodes[i]));
 					if ( showIds ) {
 						this.log("Found thermostat " + body.nodes[i].id + ". Current temperature is " + body.nodes[i].attributes.temperature.reportedValue + ", set to " + body.nodes[i].attributes.targetHeatTemperature.reportedValue );
 					}
