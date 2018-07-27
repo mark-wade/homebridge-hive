@@ -175,8 +175,13 @@ HiveThermostat.prototype = {
 		this.thermostatService.getCharacteristic(Characteristic.CurrentTemperature)
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
+					if (data && data.attributes && data.attributes.temperature && data.attributes.temperature.reportedValue) {
 					this.log( "Current temperature is " + data.attributes.temperature.reportedValue );
 					callback( error, data.attributes.temperature.reportedValue );
+					} else {
+						this.log("Unable to find temperature");
+						callback( error, -30 );
+					}
 				}.bind(this));
 			}.bind(this))
 		;
@@ -194,10 +199,15 @@ HiveThermostat.prototype = {
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
 					
+					if ( data && data.attributes && data.attributes.stateHeatingRelay && data.attributes.stateHeatingRelay.reportedValue) {
 					if ( data.attributes.stateHeatingRelay.reportedValue == 'OFF' ) {
 						var currentHeatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
 					} else {
 						var currentHeatingCoolingState = Characteristic.CurrentHeatingCoolingState.HEAT;
+					}
+					} else {
+						this.log("Failed to read stateHeatingRelay");
+						var currentHeatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
 					}
 					
 					this.log( "Current state is " + currentHeatingCoolingState );
@@ -222,11 +232,17 @@ HiveThermostat.prototype = {
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
 					
+					if ( data && data.attributes && data.attributes.activeHeatCoolMode && data.attributes.activeHeatCoolMode.reportedValue && data.attributes.targetHeatTemperature && data.attributes.targetHeatTemperature.reportedValue) {
 					if ( data.attributes.activeHeatCoolMode.reportedValue == 'OFF' || data.attributes.targetHeatTemperature.reportedValue == 1 ) {
 						var targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF;
 					} else {
 						var targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.HEAT;
 					}
+					} else {
+						this.log("Failed to read activeHeatCoolMode");
+						var targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF;
+					}
+					
 					
 					this.log( "Target state is " + targetHeatingCoolingState );
 					callback( error, targetHeatingCoolingState );
@@ -301,9 +317,15 @@ HiveThermostat.prototype = {
 			 */
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
+					
+					if (data && data.attributes && data.attributes.targetHeatTemperature && data.attributes.targetHeatTemperature.reportedValue && data.attributes.frostProtectTemperature && data.attributes.frostProtectTemperature.reportedValue) {
 					var targetTemperature = data.attributes.targetHeatTemperature.reportedValue;
 					if ( targetTemperature == 1 ) {
 						targetTemperature = data.attributes.frostProtectTemperature.reportedValue;
+					}
+					} else {
+						this.log("Failed to read targetHeatTemperature");
+						var targetTemperature = -30;
 					}
 					this.log( "Target temperature is " + targetTemperature );
 					callback(error,targetTemperature);
