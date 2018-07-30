@@ -1,3 +1,10 @@
+# This project is no longer maintained.
+
+30 July 2018: Hive seem to have changed their API breaking this plugin. Unfortunately I no longer use a Hive thermostat so I am unable to do the necessary updates 😔
+
+---------------
+
+
 # homebridge-hive
 
 This [HomeBridge](https://github.com/nfarina/homebridge) Plugin adds support for the Hive Active Heating thermostat to be controlled in the Home app in iOS and via Siri.
