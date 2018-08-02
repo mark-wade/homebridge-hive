@@ -60,6 +60,9 @@ HiveThermostat.prototype = {
 		},
 		function(error, response, body) {
 			try {
+				if (this.debug) {
+					this.log("Login JSON==" + body + "==");
+				}
 				var json = JSON.parse(body);
 				if ( json.error ) {
 					callback( json.error.reason )
@@ -102,9 +105,9 @@ HiveThermostat.prototype = {
 		var successHandler = function(body){
 			/* Parse the response */
 			for ( var i = 0; i < body.nodes.length; i++ ) {
-				if ( body.nodes[i].nodeType == "http:\/\/alertme.com\/schema\/json\/node.class.thermostat.json#" && body.nodes[i].attributes.temperature && ( !this.id || body.nodes[i].id == this.id ) ) {
+				if ( body.nodes[i] && body.nodes[i].attributes && body.nodes[i].attributes.nodeType && body.nodes[i].attributes.nodeType.reportedValue && body.nodes[i].attributes.nodeType.reportedValue == "http:\/\/alertme.com\/schema\/json\/node.class.thermostat.json#" && body.nodes[i].attributes.temperature && ( !this.id || body.nodes[i].id == this.id ) ) {
 					this.cachedMainData = body.nodes[i];
-					if ( showIds ) {
+                                        if ( showIds ) {
 						this.log("Found thermostat " + body.nodes[i].id + ". Current temperature is " + body.nodes[i].attributes.temperature.reportedValue + ", set to " + body.nodes[i].attributes.targetHeatTemperature.reportedValue );
 					}
 				}
@@ -122,10 +125,14 @@ HiveThermostat.prototype = {
 			if ( this.debug ) {
 				this.log( response );
 			}
+			if (this.debug) {
+				this.log("Main JSON==" + body + "==");
+			}
 			body = JSON.parse(body);
 			if ( body.errors ) {
 				this.getNewApiKey(function(error){
 					this._getMainData(function(error, response, body) {
+
 						body = JSON.parse(body);
 						if ( body.errors ) {
 							this.log( body.errors );
@@ -175,8 +182,13 @@ HiveThermostat.prototype = {
 		this.thermostatService.getCharacteristic(Characteristic.CurrentTemperature)
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
+					if (data && data.attributes && data.attributes.temperature && data.attributes.temperature.reportedValue) {
 					this.log( "Current temperature is " + data.attributes.temperature.reportedValue );
 					callback( error, data.attributes.temperature.reportedValue );
+					} else {
+						this.log("Unable to find temperature");
+						callback( error, -30 );
+					}
 				}.bind(this));
 			}.bind(this))
 		;
@@ -194,10 +206,15 @@ HiveThermostat.prototype = {
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
 					
+					if ( data && data.attributes && data.attributes.stateHeatingRelay && data.attributes.stateHeatingRelay.reportedValue) {
 					if ( data.attributes.stateHeatingRelay.reportedValue == 'OFF' ) {
 						var currentHeatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
 					} else {
 						var currentHeatingCoolingState = Characteristic.CurrentHeatingCoolingState.HEAT;
+					}
+					} else {
+						this.log("Failed to read stateHeatingRelay");
+						var currentHeatingCoolingState = Characteristic.CurrentHeatingCoolingState.OFF;
 					}
 					
 					this.log( "Current state is " + currentHeatingCoolingState );
@@ -222,11 +239,17 @@ HiveThermostat.prototype = {
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
 					
+					if ( data && data.attributes && data.attributes.activeHeatCoolMode && data.attributes.activeHeatCoolMode.reportedValue && data.attributes.targetHeatTemperature && data.attributes.targetHeatTemperature.reportedValue) {
 					if ( data.attributes.activeHeatCoolMode.reportedValue == 'OFF' || data.attributes.targetHeatTemperature.reportedValue == 1 ) {
 						var targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF;
 					} else {
 						var targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.HEAT;
 					}
+					} else {
+						this.log("Failed to read activeHeatCoolMode");
+						var targetHeatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF;
+					}
+					
 					
 					this.log( "Target state is " + targetHeatingCoolingState );
 					callback( error, targetHeatingCoolingState );
@@ -301,9 +324,15 @@ HiveThermostat.prototype = {
 			 */
 			.on('get', function(callback) {
 				this.getMainData(function(error,data){
+					
+					if (data && data.attributes && data.attributes.targetHeatTemperature && data.attributes.targetHeatTemperature.reportedValue && data.attributes.frostProtectTemperature && data.attributes.frostProtectTemperature.reportedValue) {
 					var targetTemperature = data.attributes.targetHeatTemperature.reportedValue;
 					if ( targetTemperature == 1 ) {
 						targetTemperature = data.attributes.frostProtectTemperature.reportedValue;
+					}
+					} else {
+						this.log("Failed to read targetHeatTemperature");
+						var targetTemperature = -30;
 					}
 					this.log( "Target temperature is " + targetTemperature );
 					callback(error,targetTemperature);
