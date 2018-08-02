@@ -125,13 +125,14 @@ HiveThermostat.prototype = {
 			if ( this.debug ) {
 				this.log( response );
 			}
+			if (this.debug) {
+				this.log("Main JSON==" + body + "==");
+			}
 			body = JSON.parse(body);
 			if ( body.errors ) {
 				this.getNewApiKey(function(error){
 					this._getMainData(function(error, response, body) {
-						if (this.debug) {
-							this.log("Main JSON==" + body + "==");
-						}
+
 						body = JSON.parse(body);
 						if ( body.errors ) {
 							this.log( body.errors );
